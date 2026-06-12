@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-cream text-ink antialiased;
+  }
+
+  ::selection {
+    @apply bg-teal-500/20 text-teal-950;
+  }
+}
+
+@layer components {
+  .container-content {
+    @apply mx-auto w-full max-w-content px-6 sm:px-10;
+  }
+
+  /* Small-caps editorial label with a leading hairline rule */
+  .eyebrow {
+    @apply inline-flex items-center gap-3 text-xs font-medium uppercase tracking-caps text-teal-600;
+  }
+
+  .eyebrow::before {
+    content: "";
+    @apply block h-px w-8 bg-current;
+  }
+
+  /* Letter-spacing breaks connected Arabic script — disable it in RTL */
+  [dir="rtl"] .eyebrow,
+  [dir="rtl"] .tracking-caps {
+    letter-spacing: 0;
+  }
+
+  /* Buttons — minimal, sharp, quiet */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-3 bg-teal-800 px-8 py-3 text-sm font-medium text-cream transition-colors duration-300 hover:bg-teal-700;
+  }
+
+  /* Solid button for dark (deep teal) surfaces */
+  .btn-light {
+    @apply inline-flex items-center justify-center gap-3 bg-mint px-8 py-3 text-sm font-medium text-teal-900 transition-colors duration-300 hover:bg-white;
+  }
+
+  /* Quiet text link with directional arrow */
+  .text-link {
+    @apply inline-flex items-center gap-2.5 text-sm font-medium text-teal-800 transition-colors duration-300 hover:text-teal-500;
+  }
+
+  /* Editorial form field: baseline rule only */
+  .input-line {
+    @apply w-full border-0 border-b border-teal-800/25 bg-transparent px-0 py-3 text-base text-ink placeholder:text-ink-mute/50 transition-colors focus:border-teal-800 focus:outline-none focus:ring-0;
+  }
+}
