@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
 import { ReadinessGauge, SkillRadar } from "./charts";
+import { SaveButton } from "./save-button";
 
 function Section({
   children,
@@ -451,6 +452,14 @@ function RecommendationCard({
             <DollarSign className="size-3.5" />
             {cert.examCost}
           </span>
+        </div>
+
+        <div className="mt-4 flex justify-end border-t border-border pt-3">
+          <SaveButton
+            slug={cert.id}
+            locale={locale}
+            labels={{ save: t.save, saved: t.saved, signInToSave: t.signInToSave }}
+          />
         </div>
       </Card>
     </motion.div>

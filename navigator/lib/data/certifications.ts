@@ -5,7 +5,7 @@ import { CERTIFICATIONS } from "@/lib/assessment/certifications";
 import type { Certification } from "@/lib/assessment/types";
 import type { CompetencyKey } from "@/lib/assessment/competencies";
 
-interface RawCert {
+export interface RawCert {
   slug: string;
   name: string;
   abbr: string;
@@ -27,7 +27,7 @@ interface RawCert {
   builds: { competency_key: CompetencyKey; weight: number | string }[] | null;
 }
 
-const CERT_SELECT = `
+export const CERT_SELECT = `
   slug, name, abbr, industry, difficulty, duration_weeks, exam_cost, budget_band,
   salary_impact, saudi_relevance, global_relevance, rating, reviews,
   summary_en, summary_ar, outcomes, tags,
@@ -35,7 +35,7 @@ const CERT_SELECT = `
   builds:certification_competencies(competency_key, weight)
 `;
 
-function mapRow(row: RawCert): Certification {
+export function mapCertRow(row: RawCert): Certification {
   const builds: Certification["builds"] = {};
   for (const b of row.builds ?? []) builds[b.competency_key] = Number(b.weight);
   return {
@@ -71,7 +71,7 @@ export async function getCertifications(): Promise<Certification[]> {
     const { data, error } = await supabase.from("certifications").select(CERT_SELECT);
     if (error) throw error;
     if (!data || data.length === 0) return CERTIFICATIONS;
-    return (data as unknown as RawCert[]).map(mapRow);
+    return (data as unknown as RawCert[]).map(mapCertRow);
   } catch (err) {
     console.error("[data/certifications] falling back to sample data:", err);
     return CERTIFICATIONS;
@@ -104,7 +104,7 @@ export async function getCertificationBySlug(slug: string): Promise<Certificatio
       .eq("slug", slug)
       .maybeSingle();
     if (error) throw error;
-    return data ? mapRow(data as unknown as RawCert) : null;
+    return data ? mapCertRow(data as unknown as RawCert) : null;
   } catch (err) {
     console.error("[data/certifications] bySlug fallback:", err);
     return CERTIFICATIONS.find((c) => c.id === slug) ?? null;

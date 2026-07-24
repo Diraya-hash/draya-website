@@ -2,6 +2,7 @@
 
 import { getCertifications } from "@/lib/data/certifications";
 import { getArchetypes } from "@/lib/data/archetypes";
+import { saveAssessment } from "@/lib/data/assessments";
 import { generateAssessment } from "@/lib/assessment/engine";
 import type { AssessmentAnswers, AssessmentResult } from "@/lib/assessment/types";
 import type { Locale } from "@/lib/i18n";
@@ -22,5 +23,10 @@ export async function runAssessment(
     getArchetypes(),
   ]);
 
-  return generateAssessment(answers, { certifications, archetypes }, locale);
+  const result = generateAssessment(answers, { certifications, archetypes }, locale);
+
+  // Persist for signed-in users (no-op otherwise) so it shows in their history.
+  await saveAssessment(answers, result);
+
+  return result;
 }
