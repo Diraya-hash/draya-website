@@ -1,5 +1,4 @@
-import { CERTIFICATIONS } from "./certifications";
-import { ARCHETYPES } from "./archetypes";
+import type { ArchetypeDefinition } from "./archetypes";
 import { COMPETENCY_KEYS, type CompetencyKey } from "./competencies";
 import type {
   AssessmentAnswers,
@@ -125,10 +124,13 @@ function readinessBand(index: number): AssessmentResult["readinessBand"] {
   return "emerging";
 }
 
-function pickArchetype(current: Record<CompetencyKey, number>) {
-  let best = ARCHETYPES[0];
+function pickArchetype(
+  current: Record<CompetencyKey, number>,
+  archetypes: ArchetypeDefinition[]
+) {
+  let best = archetypes[0];
   let bestDist = Infinity;
-  for (const a of ARCHETYPES) {
+  for (const a of archetypes) {
     let dist = 0;
     for (const k of COMPETENCY_KEYS) {
       const sig = a.signature[k];
@@ -164,13 +166,14 @@ function feasibilityForExperience(cert: Certification, exp: ExperienceLevel | ""
 
 function scoreCertifications(
   answers: AssessmentAnswers,
-  gaps: SkillGap[]
+  gaps: SkillGap[],
+  certs: Certification[]
 ): ScoredCertification[] {
   const gapByKey = Object.fromEntries(gaps.map((g) => [g.key, g.gap])) as Record<CompetencyKey, number>;
   const totalGap = gaps.reduce((s, g) => s + g.gap, 0) || 1;
   const targetIndustry = answers.targetIndustry || answers.industry;
 
-  const scored = CERTIFICATIONS.map((cert) => {
+  const scored = certs.map((cert) => {
     // 1. Gap coverage — how much of what the user lacks this builds (0–45).
     let coverage = 0;
     for (const k of COMPETENCY_KEYS) {
@@ -380,12 +383,20 @@ function buildRoadmap(
   return milestones;
 }
 
+/** Catalog the engine scores against — injected so it works over live data. */
+export interface AssessmentCatalog {
+  certifications: Certification[];
+  archetypes: ArchetypeDefinition[];
+}
+
 /**
- * The single entry point. Deterministic given the same answers, so results are
- * stable and testable. Replace the body with a Claude API call to go live.
+ * The single entry point. Deterministic given the same answers + catalog, so
+ * results are stable and testable. Swap the body for a Claude API call to go
+ * live; the catalog is already loaded from Supabase by the caller.
  */
 export function generateAssessment(
   answers: AssessmentAnswers,
+  catalog: AssessmentCatalog,
   locale: "en" | "ar" = "en"
 ): AssessmentResult {
   const current = currentProfile(answers);
@@ -394,7 +405,7 @@ export function generateAssessment(
   const readinessIndex = computeReadiness(current, target, answers);
   const weeklyHours = WEEKLY_HOURS[(answers.studyTime || "5to10") as StudyTimeBand];
 
-  const recommendations = scoreCertifications(answers, skillGaps);
+  const recommendations = scoreCertifications(answers, skillGaps, catalog.certifications);
 
   const strengths = [...skillGaps]
     .filter((g) => g.current >= 55)
@@ -412,7 +423,7 @@ export function generateAssessment(
     skillGaps,
     strengths: strengths.length ? strengths : [...skillGaps].sort((a, b) => b.current - a.current).slice(0, 2),
     weaknesses,
-    archetype: pickArchetype(current),
+    archetype: pickArchetype(current, catalog.archetypes),
     recommendations,
     salaryGrowth: projectSalaryGrowth(recommendations),
     estimatedMonths: estimateTimeline(recommendations, weeklyHours),

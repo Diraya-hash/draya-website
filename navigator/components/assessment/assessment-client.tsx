@@ -19,7 +19,7 @@ import {
   STUDY_TIME_BANDS,
   INTERESTS,
 } from "@/lib/assessment/questions";
-import { generateAssessment } from "@/lib/assessment/engine";
+import { runAssessment } from "@/lib/actions/assessment";
 import type { AssessmentAnswers, AssessmentResult } from "@/lib/assessment/types";
 import { FieldLabel, OptionGrid, Segmented, MultiSelect, SkillSlider } from "./controls";
 import { ResultsView } from "@/components/results/results-view";
@@ -104,12 +104,23 @@ export function AssessmentClient({ locale, dict }: { locale: Locale; dict: Dicti
 
   function finish() {
     setPhase("analysing");
-    // Brief analysis animation, then compute deterministically.
-    window.setTimeout(() => {
-      setResult(generateAssessment(answers, locale));
-      setPhase("results");
-      scrollTop();
-    }, 1500);
+    const started = Date.now();
+    // Compute on the server against live catalog data; keep the analysing
+    // animation on screen for a minimum beat so it doesn't flash.
+    runAssessment(answers, locale)
+      .then((res) => {
+        const wait = Math.max(0, 1200 - (Date.now() - started));
+        window.setTimeout(() => {
+          setResult(res);
+          setPhase("results");
+          scrollTop();
+        }, wait);
+      })
+      .catch((err) => {
+        console.error("[assessment] failed to generate result:", err);
+        setPhase("form");
+        setShowErrors(false);
+      });
   }
 
   function restart() {

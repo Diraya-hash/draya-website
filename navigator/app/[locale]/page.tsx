@@ -6,8 +6,8 @@ import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { CERTIFICATIONS } from "@/lib/assessment/certifications";
-import { ARCHETYPES } from "@/lib/assessment/archetypes";
+import { getCertificationCount } from "@/lib/data/certifications";
+import { getArchetypeCount } from "@/lib/data/archetypes";
 import { Reveal } from "@/components/reveal";
 
 const FEATURE_ICONS = [Gauge, Sparkles, Fingerprint, Map, TrendingUp, Globe2];
@@ -22,9 +22,14 @@ export default async function HomePage({
   const dict = await getDictionary(locale as Locale);
   const t = dict.home;
 
+  const [certCount, archetypeCount] = await Promise.all([
+    getCertificationCount(),
+    getArchetypeCount(),
+  ]);
+
   const stats = [
-    { value: `${CERTIFICATIONS.length * 40}+`, label: t.stat1 },
-    { value: `${ARCHETYPES.length}`, label: t.stat2 },
+    { value: `${certCount * 40}+`, label: t.stat1 },
+    { value: `${archetypeCount}`, label: t.stat2 },
     { value: "4", label: t.stat3 },
   ];
 

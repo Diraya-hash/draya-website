@@ -51,6 +51,42 @@ npm run dev        # http://localhost:3000
 > checkout — they share `.next` and will corrupt each other. Stop dev first,
 > or build in a separate clone.
 
+## Database (Supabase)
+
+The catalog (certifications, providers, archetypes, industries) and all per-user
+data live in Postgres via Supabase. The app reads through a data-access layer
+([`lib/data/`](lib/data)) that **falls back to the bundled sample data** whenever
+Supabase env isn't set — so the app runs with zero setup, and switches to live
+data automatically once configured.
+
+### Run locally (requires Docker Desktop running)
+
+```bash
+cd navigator
+npm install
+npm run db:start          # starts local Supabase in Docker, applies migrations
+                          # → copy the printed API URL + anon + service_role keys
+
+cp .env.local.example .env.local
+# paste NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY
+
+npm run seed              # loads the sample catalog into Postgres
+npm run db:types          # (optional) regenerate lib/supabase/database.types.ts
+npm run dev
+```
+
+Other scripts: `npm run db:reset` (drop + re-apply migrations + reseed),
+`npm run db:stop`.
+
+Schema lives in [`supabase/migrations/`](supabase/migrations). Row-Level Security
+is on for every table: catalog tables are public-read; per-user tables
+(`profiles`, `assessments`, `saved_certifications`, `career_paths`, `cv_*`) are
+restricted to `auth.uid()`.
+
+> No Docker? Use a free hosted project at [supabase.com](https://supabase.com):
+> create a project, run the migration SQL in the SQL editor (or `supabase db
+> push` with a linked project), then put its URL + keys in `.env.local`.
+
 ## Deploying to Vercel
 
 This app lives in the `navigator/` subfolder of the repository, so Vercel must
@@ -63,4 +99,7 @@ be told to build from that directory.
    at their defaults.
 4. Click **Deploy**.
 
-No environment variables are required for the current mock-data build.
+No environment variables are required to deploy (it runs on sample data). To
+serve live data on Vercel, add `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` (from a hosted Supabase project) in the Vercel
+project's Environment Variables.
