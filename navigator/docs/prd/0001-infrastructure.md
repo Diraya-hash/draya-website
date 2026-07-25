@@ -1,6 +1,8 @@
 # PRD 0001 — Infrastructure First
 
-**Status:** Approved — in progress (hosted Supabase; guarded fallback retained)
+**Status:** Shipped (code, commit 45c3a88) — approved by product. Live-DB
+verification (`verify:db` + feature walk) runs once the hosted project is
+provisioned.
 **Author:** Draaya engineering
 **Related TDD:** [tdd/0001-infrastructure.md](../tdd/0001-infrastructure.md)
 
