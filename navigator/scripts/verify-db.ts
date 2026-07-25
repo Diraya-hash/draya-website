@@ -70,6 +70,16 @@ async function main() {
   assert("certification_competencies linked", (await count(admin, "certification_competencies")) > 0);
   assert("role_skills linked", (await count(admin, "role_skills")) > 0);
 
+  // 6. Career graph (module 0002).
+  assert("job_families seeded", (await count(admin, "job_families")) > 0);
+  assert("role_progressions seeded", (await count(admin, "role_progressions")) > 0);
+  assert("role_certifications seeded", (await count(admin, "role_certifications")) > 0);
+  const { count: childSkills } = await admin
+    .from("skills")
+    .select("*", { count: "exact", head: true })
+    .not("parent_id", "is", null);
+  assert("skills hierarchy linked (parent_id)", (childSkills ?? 0) > 0, `${childSkills} children`);
+
   console.log(`\n${failures === 0 ? "✅ ALL CHECKS PASSED" : `❌ ${failures} CHECK(S) FAILED`}`);
   process.exit(failures === 0 ? 0 : 1);
 }

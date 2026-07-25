@@ -17,7 +17,7 @@ until its **PRD** and **TDD** are approved.
 | # | Module | PRD | TDD | Status |
 |---|--------|-----|-----|--------|
 | 0001 | Infrastructure First | [prd](prd/0001-infrastructure.md) | [tdd](tdd/0001-infrastructure.md) | Shipped (code); live verify on provision |
-| 0002 | Career Knowledge Graph & Ontology | [prd](prd/0002-career-graph.md) | [tdd](tdd/0002-career-graph.md) | Draft — awaiting approval |
+| 0002 | Career Knowledge Graph & Ontology | [prd](prd/0002-career-graph.md) | [tdd](tdd/0002-career-graph.md) | Shipped (code); live verify on provision |
 | 0003 | Career Path Engine ("become X") | — | — | Planned |
 | 0004 | Career Readiness Index (14-dim) + Saudi Market Intelligence | — | — | Planned |
 | 0005 | Explainable Recommendation Engine + Career DNA v2 | — | — | Planned |

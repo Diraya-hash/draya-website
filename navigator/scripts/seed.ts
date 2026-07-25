@@ -14,6 +14,8 @@ import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
 import { CATEGORIES, SKILLS, PROVIDERS, ROLES, CERTIFICATIONS, type Difficulty } from "../lib/seed/catalog";
+import { GRAPH_SKILLS } from "../lib/seed/graph";
+import { ALL_ROLES, ALL_SKILLS, FAMILIES, ALL_PROGRESSIONS, deriveRoleCerts } from "../lib/graph/sample";
 import { INDUSTRIES } from "../lib/assessment/questions";
 import { COMPETENCY_LIST } from "../lib/assessment/competencies";
 import { ARCHETYPES } from "../lib/assessment/archetypes";
@@ -199,6 +201,77 @@ async function main() {
     }));
   });
   await check("certification_competencies", (await db.from("certification_competencies").upsert(compRows, { onConflict: "certification_id,competency_key" })).error);
+
+  // === Career Knowledge Graph (module 0002) ==========================
+  // Job families
+  await check("job_families", (await db.from("job_families").upsert(
+    FAMILIES.map((f) => ({
+      slug: f.slug, name_en: f.name_en, name_ar: f.name_ar, industry: f.industry,
+      category_id: categoryId.get(f.category) ?? null, sort_order: f.sort_order,
+    })),
+    { onConflict: "slug" }
+  )).error);
+  const familyId = new Map((await db.from("job_families").select("id, slug")).data?.map((f) => [f.slug, f.id as string]) ?? []);
+
+  // Graph skills (new hierarchy nodes)
+  await check("graph skills", (await db.from("skills").upsert(
+    GRAPH_SKILLS.map((s) => ({
+      slug: s.slug, name_en: s.name_en, name_ar: s.name_ar, kind: s.kind,
+      category_id: categoryId.get(s.category) ?? null, future_demand: s.future_demand,
+      competency_key: KIND_TO_COMPETENCY[s.kind] ?? null,
+    })),
+    { onConflict: "slug" }
+  )).error);
+  const gSkillId = new Map((await db.from("skills").select("id, slug")).data?.map((s) => [s.slug, s.id as string]) ?? []);
+
+  // Hierarchy + competency rollup for every skill
+  const skillUpdates = await Promise.all(ALL_SKILLS.map((s) =>
+    db.from("skills").update({
+      competency_key: s.competency,
+      parent_id: s.parent ? (gSkillId.get(s.parent) ?? null) : null,
+      depth: s.parent ? 1 : 0,
+    }).eq("slug", s.slug)
+  ));
+  await check("skill hierarchy", skillUpdates.find((r) => r.error)?.error ?? null);
+
+  // Roles (full detail: family, responsibilities, experience, summary)
+  await check("career_roles (graph)", (await db.from("career_roles").upsert(
+    ALL_ROLES.map((r) => ({
+      slug: r.slug, title_en: r.title_en, title_ar: r.title_ar, level: r.level,
+      category_id: categoryId.get(r.category) ?? null,
+      job_family_id: r.family ? (familyId.get(r.family) ?? null) : null,
+      median_salary_usd: r.median_salary_usd, saudi_demand: r.saudi_demand,
+      global_demand: r.global_demand, future_demand: r.future_demand,
+      typical_experience_years: r.typical_experience_years,
+      summary_en: r.summary_en, summary_ar: r.summary_ar, responsibilities: r.responsibilities,
+    })),
+    { onConflict: "slug" }
+  )).error);
+  const gRoleId = new Map((await db.from("career_roles").select("id, slug")).data?.map((r) => [r.slug, r.id as string]) ?? []);
+
+  // role_skills
+  const roleSkillRows2 = ALL_ROLES.flatMap((r) =>
+    r.skills.filter((s) => gSkillId.has(s) && gRoleId.has(r.slug)).map((s) => ({
+      role_id: gRoleId.get(r.slug)!, skill_id: gSkillId.get(s)!, importance: 0.7,
+    }))
+  );
+  await check("role_skills (graph)", (await db.from("role_skills").upsert(roleSkillRows2, { onConflict: "role_id,skill_id" })).error);
+
+  // role_progressions (ladders)
+  const progRows = ALL_PROGRESSIONS
+    .filter((p) => gRoleId.has(p.from) && gRoleId.has(p.to))
+    .map((p) => ({ from_role_id: gRoleId.get(p.from)!, to_role_id: gRoleId.get(p.to)!, typical_years: p.years }));
+  await check("role_progressions", (await db.from("role_progressions").upsert(progRows, { onConflict: "from_role_id,to_role_id" })).error);
+
+  // role_certifications (derived by skill overlap)
+  const certIdBySlug = new Map((await db.from("certifications").select("id, slug")).data?.map((c) => [c.slug, c.id as string]) ?? []);
+  const roleCertRows = ALL_ROLES.flatMap((r) => {
+    if (!gRoleId.has(r.slug)) return [];
+    return deriveRoleCerts(r.skills)
+      .filter((rc) => certIdBySlug.has(rc.slug))
+      .map((rc) => ({ role_id: gRoleId.get(r.slug)!, certification_id: certIdBySlug.get(rc.slug)!, strength: rc.strength }));
+  });
+  await check("role_certifications", (await db.from("role_certifications").upsert(roleCertRows, { onConflict: "role_id,certification_id" })).error);
 
   // Minimal geography / languages -------------------------------------
   await check("countries", (await db.from("countries").upsert([

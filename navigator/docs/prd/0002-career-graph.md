@@ -1,6 +1,8 @@
 # PRD 0002 — Career Knowledge Graph & Skills Ontology
 
-**Status:** Draft — awaiting approval
+**Status:** Shipped (code) — approved (full scope, 3 ladders). Explorer verified
+on the sample/fallback (== seed source); live-DB verify + `getRoleGraph` live
+enrichment run on provisioning.
 **Author:** Draaya engineering
 **Related TDD:** [tdd/0002-career-graph.md](../tdd/0002-career-graph.md)
 
